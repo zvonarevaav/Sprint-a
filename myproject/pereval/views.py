@@ -1,53 +1,61 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .database import DatabaseHandler  # Импортируем наш новый класс
 import json
-from .models import Pereval, User
+from .models import Pereval, User, Coords, PerevalImage
 
 @csrf_exempt
 def submit_data(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            db_handler = DatabaseHandler()
 
             # Вставка данных пользователя
-            user_id = db_handler.insert_user(
-                email=data['email'],
-                name=data['name'],
-                phone=data.get('phone')
+            user, _ = User.objects.get_or_create(
+                email=data['user']['email'],
+                defaults={
+                    'name': data['user']['name'],
+                    'phone': data['user']['phone']
+                }
             )
 
             # Вставка данных координат
-            coord_id = db_handler.insert_coords(
-                latitude=data['latitude'],
-                longitude=data['longitude'],
-                height=data['height']
+            coord = Coords.objects.create(
+                latitude=data['coords']['latitude'],
+                longitude=data['coords']['longitude'],
+                height=data['coords']['height']
             )
 
             # Вставка данных перевала
-            pereval_id = db_handler.insert_pereval(
-                user_id=user_id,
+            pereval = Pereval.objects.create(
+                user=user,
                 beautyTitle=data['beautyTitle'],
                 title=data['title'],
                 other_titles=data.get('other_titles'),
                 connect=data.get('connect'),
                 add_time=data['add_time'],
-                coord_id=coord_id,
-                winter_level=data.get('winter_level'),
-                summer_level=data.get('summer_level'),
-                autumn_level=data.get('autumn_level'),
-                spring_level=data.get('spring_level')
+                coord=coord,
+                winter_level=data['level'].get('winter'),
+                summer_level=data['level'].get('summer'),
+                autumn_level=data['level'].get('autumn'),
+                spring_level=data['level'].get('spring'),
             )
 
             # Вставка изображений перевала
             if 'images' in data:
-                for image_url in data['images']:
-                    db_handler.insert_image(pereval_id, image_url)
+                for image_data in data['images']:
+                    PerevalImage.objects.create(
+                        pereval=pereval,
+                        image_url=image_data['image']
+                    )
 
-            return JsonResponse({"status": "success", "message": "Data submitted successfully", "id": pereval_id},
-                                status=201)
+            return JsonResponse({
+                "status": "success",
+                "message": "Data submitted successfully",
+                "id": pereval.id  # Возвращаем ID перевала
+            }, status=201)
 
+        except KeyError as e:
+            return JsonResponse({"status": "error", "message": f"Missing required field: {str(e)}"}, status=400)
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
@@ -82,14 +90,13 @@ def get_pereval(request, id):
                 "autumn": pereval.autumn_level,
                 "spring": pereval.spring_level
             },
-            "images": [image.image_url for image in pereval.perevalimage_set.all()]
+            "images": [image.image_url for image in pereval.images.all()]  # Исправлено на pereval.images.all()
         }
         return JsonResponse(data, status=200)
     except Pereval.DoesNotExist:
         return JsonResponse({"status": "error", "message": "Pereval not found"}, status=404)
 
 
-# Новый метод для редактирования записи
 @csrf_exempt
 def update_pereval(request, id):
     if request.method == 'PATCH':
@@ -112,10 +119,14 @@ def update_pereval(request, id):
             pereval.summer_level = data.get('summer_level', pereval.summer_level)
             pereval.autumn_level = data.get('autumn_level', pereval.autumn_level)
             pereval.spring_level = data.get('spring_level', pereval.spring_level)
+
+            # Сохраняем обновленные координаты и перевал
             pereval.coord.save()
             pereval.save()
 
+            # Возвращаем только состояние успешного обновления
             return JsonResponse({"state": 1, "message": "Pereval updated successfully"}, status=200)
+
         except Pereval.DoesNotExist:
             return JsonResponse({"state": 0, "message": "Pereval not found"}, status=404)
         except Exception as e:
