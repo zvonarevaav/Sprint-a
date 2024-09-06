@@ -49,6 +49,10 @@ _2. Покрытие кода тестами_
 
 Документация: Swagger (drf-yasg)
 
+Документация swagger: http://127.0.0.1:8000/swagger/ и http://redfox84.pythonanywhere.com/swagger/
+
+Документация redoc: http://127.0.0.1:8000/redoc/ и http://redfox84.pythonanywhere.com/redoc/
+
 
 # Дополнительно
 
@@ -57,9 +61,6 @@ API задеплоено в облаке и готово к использова
 Проект поддерживает расширение функционала для работы с пользователями и данными о перевалах.
 
 
-Документация сгенерирована с помощью пакета drf-yasg
 
-Документация swagger: http://127.0.0.1:8000/swagger/ и http://redfox84.pythonanywhere.com/swagger/
 
-Документация redoc: http://127.0.0.1:8000/redoc/ и http://redfox84.pythonanywhere.com/redoc/
 
